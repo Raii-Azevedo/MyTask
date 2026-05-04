@@ -28,6 +28,8 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['rai-task.up.railway.app']
 
+CSRF_TRUSTED_ORIGINS = ['https://rai-task.up.railway.app']
+
 
 # Application definition
 
