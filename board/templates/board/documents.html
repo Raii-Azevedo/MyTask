@@ -1,0 +1,112 @@
+{% extends 'board/base.html' %}
+
+{% block title %}Catalogo de Documentos{% endblock %}
+
+{% block extra_head %}
+<style>
+    .layout {
+        display: grid;
+        grid-template-columns: minmax(280px, 360px) 1fr;
+        gap: 16px;
+    }
+
+    .form-grid {
+        display: grid;
+        gap: 10px;
+    }
+
+    .search-form {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 10px;
+        margin-bottom: 12px;
+    }
+
+    .doc-list {
+        display: grid;
+        gap: 10px;
+    }
+
+    .doc-item {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 12px;
+        background: rgba(12, 18, 36, 0.68);
+    }
+
+    .doc-header {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+        margin-bottom: 4px;
+    }
+
+    .pill {
+        border: 1px solid #3b4a77;
+        border-radius: 999px;
+        font-size: .8rem;
+        color: var(--warn);
+        padding: 2px 9px;
+    }
+
+    .doc-link {
+        color: var(--primary);
+        text-decoration: none;
+        word-break: break-all;
+    }
+
+    .doc-link:hover {
+        text-decoration: underline;
+    }
+
+    @media (max-width: 980px) {
+        .layout {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1 class="page-title">Catalogo de Documentos</h1>
+
+<section class="layout">
+    <article class="panel">
+        <h2>Novo documento</h2>
+        <form class="form-grid" method="post" action="{% url 'board:add_document' %}">
+            {% csrf_token %}
+            {{ document_form.title }}
+            {{ document_form.url }}
+            {{ document_form.client }}
+            <label for="id_reference_date" class="muted">Data de criacao/modificacao</label>
+            {{ document_form.reference_date }}
+            <button type="submit">Salvar documento</button>
+        </form>
+    </article>
+
+    <article class="panel">
+        <form class="search-form" method="get" action="{% url 'board:documents' %}">
+            <input type="text" name="q" value="{{ query }}" placeholder="Buscar por titulo, cliente ou link">
+            <button type="submit">Buscar</button>
+        </form>
+
+        <div class="doc-list">
+            {% for document in documents %}
+                <div class="doc-item">
+                    <div class="doc-header">
+                        <strong>{{ document.title }}</strong>
+                        <span class="pill">{{ document.client }}</span>
+                    </div>
+                    <div class="muted">Data referencia: {{ document.reference_date|date:'d/m/Y' }}</div>
+                    <div class="muted">Atualizado: {{ document.updated_at|date:'d/m/Y H:i' }}</div>
+                    <a class="doc-link" href="{{ document.url }}" target="_blank" rel="noopener noreferrer">{{ document.url }}</a>
+                </div>
+            {% empty %}
+                <p class="muted">Nenhum documento encontrado.</p>
+            {% endfor %}
+        </div>
+    </article>
+</section>
+{% endblock %}

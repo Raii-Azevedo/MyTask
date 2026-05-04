@@ -1,0 +1,236 @@
+{% extends 'board/base.html' %}
+
+{% block title %}Kanban{% endblock %}
+
+{% block extra_head %}
+<style>
+    .new-task {
+        margin-bottom: 16px;
+    }
+
+    .new-task form {
+        display: grid;
+        gap: 10px;
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .new-task form textarea,
+    .new-task form button {
+        grid-column: 1 / -1;
+    }
+
+    .board {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(250px, 1fr));
+        gap: 14px;
+    }
+
+    .column {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 10px;
+        background: rgba(14, 22, 43, 0.78);
+    }
+
+    .column-title {
+        margin: 0 0 10px;
+        font-size: 1rem;
+        color: #d3defd;
+    }
+
+    .task {
+        border: 1px solid #32426f;
+        border-radius: 12px;
+        padding: 10px;
+        background: linear-gradient(155deg, rgba(39, 49, 82, 0.8), rgba(18, 25, 47, 0.86));
+        margin-bottom: 10px;
+    }
+
+    .task-main {
+        display: grid;
+        gap: 8px;
+    }
+
+    .task-top {
+        display: grid;
+        grid-template-columns: 1fr 120px 150px auto;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .task-top button {
+        padding: 9px;
+        font-size: .86rem;
+    }
+
+    .status-form {
+        margin: 8px 0;
+    }
+
+    .deadline-chip {
+        display: inline-flex;
+        align-items: center;
+        margin: 4px 0 8px;
+        font-size: .83rem;
+        color: #9bc6ff;
+        border: 1px solid #32426f;
+        border-radius: 999px;
+        padding: 3px 9px;
+        background: rgba(15, 31, 67, 0.45);
+    }
+
+    .deadline-chip.overdue {
+        color: #ffd1de;
+        border-color: #8d3553;
+        background: rgba(79, 20, 40, 0.5);
+    }
+
+    .subtasks-title {
+        margin: 6px 0;
+        font-size: .82rem;
+        color: #b7c8f7;
+        text-transform: uppercase;
+        letter-spacing: .5px;
+    }
+
+    .subtasks {
+        list-style: none;
+        padding: 0;
+        margin: 8px 0;
+        display: grid;
+        gap: 6px;
+    }
+
+    .subtask-item {
+        border: 1px solid #32426f;
+        border-radius: 10px;
+        padding: 6px 8px;
+        background: rgba(12, 18, 34, 0.6);
+    }
+
+    .subtask-item form {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .subtask-item button {
+        width: auto;
+        padding: 6px 8px;
+        font-size: .78rem;
+    }
+
+    .done {
+        text-decoration: line-through;
+        color: #89a1d9;
+    }
+
+    .subtask-add {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px;
+    }
+
+    .subtask-add button {
+        width: auto;
+    }
+
+    .empty {
+        color: var(--muted);
+        font-size: .9rem;
+    }
+
+    @media (max-width: 1080px) {
+        .board {
+            grid-template-columns: 1fr;
+        }
+
+        .task-top {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1 class="page-title">Kanban</h1>
+
+<section class="panel new-task">
+    <form method="post" action="{% url 'board:add_task' %}">
+        {% csrf_token %}
+        {{ task_form.title }}
+        {{ task_form.priority }}
+        {{ task_form.deadline }}
+        {{ task_form.description }}
+        {{ task_form.status }}
+        <button type="submit">Criar task</button>
+    </form>
+</section>
+
+<section class="board">
+    {% for column in columns %}
+        <article class="column">
+            <h2 class="column-title">{{ column.label }}</h2>
+
+            {% for task in column.tasks %}
+                <div class="task">
+                    <form class="task-main" method="post" action="{% url 'board:update_task' task.id %}">
+                        {% csrf_token %}
+                        <div class="task-top">
+                            <input type="text" name="title" value="{{ task.title }}" required>
+                            <select name="priority" required>
+                                {% for value, label in task.PRIORITY_CHOICES %}
+                                    <option value="{{ value }}" {% if value == task.priority %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                            <input type="date" name="deadline" value="{% if task.deadline %}{{ task.deadline|date:'Y-m-d' }}{% endif %}">
+                            <button type="submit">Salvar</button>
+                        </div>
+                        <textarea name="description" rows="2" placeholder="Descricao">{{ task.description }}</textarea>
+                    </form>
+
+                    {% if task.deadline %}
+                        <div class="deadline-chip {% if task.deadline < today and task.status != 'done' %}overdue{% endif %}">
+                            Deadline: {{ task.deadline|date:'d/m/Y' }}
+                        </div>
+                    {% endif %}
+
+                    <form class="status-form" method="post" action="{% url 'board:update_task_status' task.id %}">
+                        {% csrf_token %}
+                        <select name="status" onchange="this.form.submit()">
+                            {% for value, label in status_choices %}
+                                <option value="{{ value }}" {% if value == task.status %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </form>
+
+                    <h3 class="subtasks-title">Checklist de tarefas extras da tarefa-pai</h3>
+                    <ul class="subtasks">
+                        {% for subtask in task.subtasks.all %}
+                            <li class="subtask-item">
+                                <form method="post" action="{% url 'board:toggle_subtask' subtask.id %}">
+                                    {% csrf_token %}
+                                    <input type="checkbox" {% if subtask.is_done %}checked{% endif %} onchange="this.form.submit()">
+                                    <span class="{% if subtask.is_done %}done{% endif %}">{{ subtask.title }}</span>
+                                    <button type="submit">Salvar</button>
+                                </form>
+                            </li>
+                        {% empty %}
+                            <li class="empty">Sem subtarefas.</li>
+                        {% endfor %}
+                    </ul>
+
+                    <form class="subtask-add" method="post" action="{% url 'board:add_subtask' task.id %}">
+                        {% csrf_token %}
+                        <input type="text" name="title" placeholder="Nova subtarefa" required>
+                        <button type="submit">Adicionar</button>
+                    </form>
+                </div>
+            {% empty %}
+                <p class="empty">Nenhuma task nesta coluna.</p>
+            {% endfor %}
+        </article>
+    {% endfor %}
+</section>
+{% endblock %}
