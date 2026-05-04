@@ -4,151 +4,252 @@
 
 {% block extra_head %}
 <style>
-    .new-task {
-        margin-bottom: 16px;
-    }
-
+    /* ── Nova task ───────────────────────────────────────── */
+    .new-task { margin-bottom: 16px; }
     .new-task form {
         display: grid;
         gap: 10px;
         grid-template-columns: 1fr 1fr;
     }
-
     .new-task form textarea,
-    .new-task form button {
-        grid-column: 1 / -1;
-    }
+    .new-task form button { grid-column: 1 / -1; }
 
+    /* ── Board ───────────────────────────────────────────── */
     .board {
         display: grid;
         grid-template-columns: repeat(3, minmax(250px, 1fr));
         gap: 14px;
     }
-
     .column {
         border: 1px solid var(--line);
         border-radius: 12px;
         padding: 10px;
         background: rgba(14, 22, 43, 0.78);
     }
-
     .column-title {
         margin: 0 0 10px;
         font-size: 1rem;
         color: #d3defd;
     }
 
-    .task {
+    /* ── Card compacto ───────────────────────────────────── */
+    .task-card {
         border: 1px solid #32426f;
         border-radius: 12px;
-        padding: 10px;
-        background: linear-gradient(155deg, rgba(39, 49, 82, 0.8), rgba(18, 25, 47, 0.86));
+        padding: 10px 12px;
+        background: linear-gradient(155deg, rgba(39,49,82,0.8), rgba(18,25,47,0.86));
         margin-bottom: 10px;
+        cursor: pointer;
+        transition: border-color .2s, box-shadow .2s;
     }
+    .task-card:hover { border-color: #5b78c8; box-shadow: 0 0 0 2px rgba(91,120,200,.18); }
+    .task-card.is-done { opacity: .72; cursor: default; }
+    .task-card.is-done:hover { border-color: #32426f; box-shadow: none; }
 
-    .task-main {
-        display: grid;
-        gap: 8px;
-    }
-
-    .task-top {
-        display: grid;
-        grid-template-columns: 1fr 120px 150px auto;
-        gap: 8px;
+    .card-row {
+        display: flex;
         align-items: center;
+        justify-content: space-between;
+        gap: 8px;
     }
-
-    .task-top button {
-        padding: 9px;
-        font-size: .86rem;
+    .card-title {
+        font-size: .95rem;
+        color: #d3defd;
+        font-weight: 600;
+        flex: 1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
-
-    .status-form {
-        margin: 8px 0;
+    .card-title.done-title {
+        text-decoration: line-through;
+        color: #89a1d9;
     }
+    .priority-badge {
+        font-size: .72rem;
+        font-weight: 700;
+        border-radius: 999px;
+        padding: 2px 8px;
+        text-transform: uppercase;
+        letter-spacing: .4px;
+        flex-shrink: 0;
+    }
+    .priority-alta  { background: rgba(180,40,60,.35); color: #ffb3bf; border: 1px solid #8d3553; }
+    .priority-media { background: rgba(160,120,10,.3); color: #ffe3a0; border: 1px solid #7a5f10; }
+    .priority-baixa { background: rgba(30,100,60,.3);  color: #a8f0c6; border: 1px solid #1e6440; }
 
     .deadline-chip {
         display: inline-flex;
         align-items: center;
-        margin: 4px 0 8px;
-        font-size: .83rem;
+        margin-top: 6px;
+        font-size: .78rem;
         color: #9bc6ff;
         border: 1px solid #32426f;
         border-radius: 999px;
-        padding: 3px 9px;
-        background: rgba(15, 31, 67, 0.45);
+        padding: 2px 8px;
+        background: rgba(15,31,67,.45);
     }
+    .deadline-chip.overdue { color: #ffd1de; border-color: #8d3553; background: rgba(79,20,40,.5); }
 
-    .deadline-chip.overdue {
-        color: #ffd1de;
-        border-color: #8d3553;
-        background: rgba(79, 20, 40, 0.5);
+    .card-status-row {
+        margin-top: 8px;
     }
+    .card-status-row select { font-size: .82rem; padding: 4px 6px; }
 
-    .subtasks-title {
-        margin: 6px 0;
+    .btn-details {
+        margin-top: 8px;
+        width: 100%;
         font-size: .82rem;
+        padding: 6px;
+        background: rgba(50,66,111,.5);
+        border: 1px solid #32426f;
+        border-radius: 8px;
         color: #b7c8f7;
+        cursor: pointer;
+        transition: background .2s;
+    }
+    .btn-details:hover { background: rgba(70,90,155,.6); }
+
+    .done-lock-note {
+        margin-top: 8px;
+        font-size: .75rem;
+        color: #6a7da8;
+        text-align: center;
+    }
+
+    .empty { color: var(--muted); font-size: .9rem; }
+
+    /* ── Modal ───────────────────────────────────────────── */
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(5,10,25,.72);
+        backdrop-filter: blur(3px);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    }
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+        background: linear-gradient(160deg, rgba(22,32,60,.97), rgba(12,18,38,.98));
+        border: 1px solid #32426f;
+        border-radius: 16px;
+        width: 100%;
+        max-width: 680px;
+        max-height: 88vh;
+        overflow-y: auto;
+        padding: 28px 30px;
+        position: relative;
+        box-shadow: 0 8px 40px rgba(0,0,0,.6);
+    }
+    .modal-close {
+        position: absolute;
+        top: 14px; right: 16px;
+        background: none;
+        border: none;
+        font-size: 1.4rem;
+        color: #6a7da8;
+        cursor: pointer;
+        line-height: 1;
+        padding: 4px 8px;
+        border-radius: 6px;
+        transition: color .2s, background .2s;
+    }
+    .modal-close:hover { color: #d3defd; background: rgba(50,66,111,.4); }
+
+    .modal-title-bar {
+        margin: 0 0 18px;
+        padding-right: 32px;
+    }
+    .modal-title-bar h2 {
+        font-size: 1.25rem;
+        color: #d3defd;
+        margin: 0 0 4px;
+    }
+    .modal-title-bar .done-badge {
+        display: inline-block;
+        font-size: .75rem;
+        font-weight: 700;
+        background: rgba(30,100,60,.35);
+        color: #a8f0c6;
+        border: 1px solid #1e6440;
+        border-radius: 999px;
+        padding: 2px 10px;
+        letter-spacing: .4px;
+        text-transform: uppercase;
+        margin-top: 2px;
+    }
+
+    .modal-section { margin-bottom: 20px; }
+    .modal-label {
+        font-size: .78rem;
         text-transform: uppercase;
         letter-spacing: .5px;
+        color: #6a7da8;
+        margin-bottom: 6px;
     }
 
-    .subtasks {
-        list-style: none;
-        padding: 0;
-        margin: 8px 0;
+    /* edit form inside modal */
+    .modal-edit-form { display: grid; gap: 10px; }
+    .modal-edit-form .form-row {
         display: grid;
-        gap: 6px;
+        grid-template-columns: 1fr 130px 160px;
+        gap: 8px;
     }
+    .modal-edit-form textarea { min-height: 90px; }
+    .modal-edit-form button[type=submit] { justify-self: start; min-width: 100px; }
 
+    /* read-only description */
+    .readonly-desc {
+        color: #b7c8f7;
+        font-size: .92rem;
+        line-height: 1.6;
+        background: rgba(12,18,34,.4);
+        border: 1px solid #1e2a4a;
+        border-radius: 8px;
+        padding: 10px 12px;
+        white-space: pre-wrap;
+    }
+    .readonly-desc.empty-desc { color: #4a5a82; font-style: italic; }
+
+    /* subtasks inside modal */
+    .subtasks { list-style: none; padding: 0; margin: 0 0 10px; display: grid; gap: 6px; }
     .subtask-item {
         border: 1px solid #32426f;
         border-radius: 10px;
-        padding: 6px 8px;
-        background: rgba(12, 18, 34, 0.6);
+        padding: 7px 10px;
+        background: rgba(12,18,34,.6);
     }
-
     .subtask-item form {
         display: grid;
         grid-template-columns: auto 1fr auto;
         gap: 8px;
         align-items: center;
     }
+    .subtask-item button { width: auto; padding: 5px 8px; font-size: .78rem; }
+    .subtask-item .done { text-decoration: line-through; color: #89a1d9; }
 
-    .subtask-item button {
-        width: auto;
-        padding: 6px 8px;
-        font-size: .78rem;
-    }
-
-    .done {
-        text-decoration: line-through;
-        color: #89a1d9;
-    }
-
-    .subtask-add {
-        display: grid;
-        grid-template-columns: 1fr auto;
+    .subtask-readonly {
+        display: flex;
+        align-items: center;
         gap: 8px;
+        font-size: .88rem;
+        color: #b7c8f7;
     }
+    .subtask-readonly.done { color: #89a1d9; text-decoration: line-through; }
+    .subtask-check-icon { font-size: .95rem; }
 
-    .subtask-add button {
-        width: auto;
-    }
+    .subtask-add { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+    .subtask-add button { width: auto; }
 
-    .empty {
-        color: var(--muted);
-        font-size: .9rem;
-    }
+    .status-form select { font-size: .85rem; }
 
     @media (max-width: 1080px) {
-        .board {
-            grid-template-columns: 1fr;
-        }
-
-        .task-top {
-            grid-template-columns: 1fr;
-        }
+        .board { grid-template-columns: 1fr; }
+        .modal-edit-form .form-row { grid-template-columns: 1fr; }
     }
 </style>
 {% endblock %}
@@ -156,6 +257,7 @@
 {% block content %}
 <h1 class="page-title">Kanban</h1>
 
+<!-- Nova task -->
 <section class="panel new-task">
     <form method="post" action="{% url 'board:add_task' %}">
         {% csrf_token %}
@@ -168,27 +270,19 @@
     </form>
 </section>
 
+<!-- Board -->
 <section class="board">
     {% for column in columns %}
         <article class="column">
             <h2 class="column-title">{{ column.label }}</h2>
 
             {% for task in column.tasks %}
-                <div class="task">
-                    <form class="task-main" method="post" action="{% url 'board:update_task' task.id %}">
-                        {% csrf_token %}
-                        <div class="task-top">
-                            <input type="text" name="title" value="{{ task.title }}" required>
-                            <select name="priority" required>
-                                {% for value, label in task.PRIORITY_CHOICES %}
-                                    <option value="{{ value }}" {% if value == task.priority %}selected{% endif %}>{{ label }}</option>
-                                {% endfor %}
-                            </select>
-                            <input type="date" name="deadline" value="{% if task.deadline %}{{ task.deadline|date:'Y-m-d' }}{% endif %}">
-                            <button type="submit">Salvar</button>
-                        </div>
-                        <textarea name="description" rows="2" placeholder="Descricao">{{ task.description }}</textarea>
-                    </form>
+                {% with is_done=task.status|stringformat:"s" %}
+                <div class="task-card {% if task.status == 'done' %}is-done{% endif %}">
+                    <div class="card-row">
+                        <span class="card-title {% if task.status == 'done' %}done-title{% endif %}">{{ task.title }}</span>
+                        <span class="priority-badge priority-{{ task.priority }}">{{ task.priority }}</span>
+                    </div>
 
                     {% if task.deadline %}
                         <div class="deadline-chip {% if task.deadline < today and task.status != 'done' %}overdue{% endif %}">
@@ -196,41 +290,140 @@
                         </div>
                     {% endif %}
 
-                    <form class="status-form" method="post" action="{% url 'board:update_task_status' task.id %}">
-                        {% csrf_token %}
-                        <select name="status" onchange="this.form.submit()">
-                            {% for value, label in status_choices %}
-                                <option value="{{ value }}" {% if value == task.status %}selected{% endif %}>{{ label }}</option>
-                            {% endfor %}
-                        </select>
-                    </form>
-
-                    <h3 class="subtasks-title">Checklist de tarefas extras da tarefa-pai</h3>
-                    <ul class="subtasks">
-                        {% for subtask in task.subtasks.all %}
-                            <li class="subtask-item">
-                                <form method="post" action="{% url 'board:toggle_subtask' subtask.id %}">
-                                    {% csrf_token %}
-                                    <input type="checkbox" {% if subtask.is_done %}checked{% endif %} onchange="this.form.submit()">
-                                    <span class="{% if subtask.is_done %}done{% endif %}">{{ subtask.title }}</span>
-                                    <button type="submit">Salvar</button>
-                                </form>
-                            </li>
-                        {% empty %}
-                            <li class="empty">Sem subtarefas.</li>
-                        {% endfor %}
-                    </ul>
-
-                    <form class="subtask-add" method="post" action="{% url 'board:add_subtask' task.id %}">
-                        {% csrf_token %}
-                        <input type="text" name="title" placeholder="Nova subtarefa" required>
-                        <button type="submit">Adicionar</button>
-                    </form>
+                    {% if task.status != 'done' %}
+                        <div class="card-status-row">
+                            <form method="post" action="{% url 'board:update_task_status' task.id %}">
+                                {% csrf_token %}
+                                <select name="status" onchange="this.form.submit()">
+                                    {% for value, label in status_choices %}
+                                        <option value="{{ value }}" {% if value == task.status %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </form>
+                        </div>
+                        <button class="btn-details" onclick="openModal('modal-{{ task.id }}')">Ver detalhes / Editar</button>
+                    {% else %}
+                        <p class="done-lock-note">Concluida — somente leitura</p>
+                        <button class="btn-details" onclick="openModal('modal-{{ task.id }}')">Ver detalhes</button>
+                    {% endif %}
                 </div>
+                {% endwith %}
             {% empty %}
                 <p class="empty">Nenhuma task nesta coluna.</p>
             {% endfor %}
         </article>
     {% endfor %}
 </section>
+
+<!-- Modais de detalhe -->
+{% for column in columns %}
+    {% for task in column.tasks %}
+    <div class="modal-overlay" id="modal-{{ task.id }}">
+        <div class="modal" role="dialog" aria-modal="true">
+            <button class="modal-close" onclick="closeModal('modal-{{ task.id }}')" title="Fechar">&times;</button>
+
+            <div class="modal-title-bar">
+                <h2>{{ task.title }}</h2>
+                {% if task.status == 'done' %}
+                    <span class="done-badge">&#10003; Concluida</span>
+                {% endif %}
+            </div>
+
+            {% if task.status != 'done' %}
+            <!-- Formulário de edição (só para todo/doing) -->
+            <div class="modal-section">
+                <p class="modal-label">Editar</p>
+                <form class="modal-edit-form" method="post" action="{% url 'board:update_task' task.id %}">
+                    {% csrf_token %}
+                    <div class="form-row">
+                        <input type="text" name="title" value="{{ task.title }}" required placeholder="Título">
+                        <select name="priority" required>
+                            {% for value, label in task.PRIORITY_CHOICES %}
+                                <option value="{{ value }}" {% if value == task.priority %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                        <input type="date" name="deadline" value="{% if task.deadline %}{{ task.deadline|date:'Y-m-d' }}{% endif %}">
+                    </div>
+                    <textarea name="description" rows="4" placeholder="Descrição">{{ task.description }}</textarea>
+                    <button type="submit">Salvar alterações</button>
+                </form>
+            </div>
+            {% else %}
+            <!-- Descrição somente leitura -->
+            <div class="modal-section">
+                <p class="modal-label">Descrição</p>
+                {% if task.description %}
+                    <div class="readonly-desc">{{ task.description }}</div>
+                {% else %}
+                    <div class="readonly-desc empty-desc">Sem descrição.</div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Subtarefas -->
+            <div class="modal-section">
+                <p class="modal-label">Subtarefas</p>
+                <ul class="subtasks">
+                    {% for subtask in task.subtasks.all %}
+                        <li class="subtask-item">
+                            {% if task.status != 'done' %}
+                                <form method="post" action="{% url 'board:toggle_subtask' subtask.id %}">
+                                    {% csrf_token %}
+                                    <input type="checkbox" {% if subtask.is_done %}checked{% endif %} onchange="this.form.submit()">
+                                    <span class="{% if subtask.is_done %}done{% endif %}">{{ subtask.title }}</span>
+                                    <button type="submit">Ok</button>
+                                </form>
+                            {% else %}
+                                <div class="subtask-readonly {% if subtask.is_done %}done{% endif %}">
+                                    <span class="subtask-check-icon">{% if subtask.is_done %}&#10003;{% else %}&#9675;{% endif %}</span>
+                                    <span>{{ subtask.title }}</span>
+                                </div>
+                            {% endif %}
+                        </li>
+                    {% empty %}
+                        <li class="empty">Sem subtarefas.</li>
+                    {% endfor %}
+                </ul>
+
+                {% if task.status != 'done' %}
+                <form class="subtask-add" method="post" action="{% url 'board:add_subtask' task.id %}">
+                    {% csrf_token %}
+                    <input type="text" name="title" placeholder="Nova subtarefa" required>
+                    <button type="submit">Adicionar</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+{% endfor %}
+
+<script>
+    function openModal(id) {
+        document.getElementById(id).classList.add('open');
+        document.body.style.overflow = 'hidden';
+    }
+    function closeModal(id) {
+        document.getElementById(id).classList.remove('open');
+        document.body.style.overflow = '';
+    }
+    // Fechar clicando fora do modal
+    document.querySelectorAll('.modal-overlay').forEach(function(overlay) {
+        overlay.addEventListener('click', function(e) {
+            if (e.target === overlay) {
+                overlay.classList.remove('open');
+                document.body.style.overflow = '';
+            }
+        });
+    });
+    // Fechar com Escape
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            document.querySelectorAll('.modal-overlay.open').forEach(function(o) {
+                o.classList.remove('open');
+                document.body.style.overflow = '';
+            });
+        }
+    });
+</script>
 {% endblock %}
